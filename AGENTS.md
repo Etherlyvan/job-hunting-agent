@@ -17,3 +17,7 @@ To prevent duplication and configuration drift across different AI agent framewo
    - Do not duplicate these rules or specifications. Treat `.claude/` files as the single source of truth.
 3. **Portal Search Skills:**
    - Job-portal search CLIs live under [.agents/skills/](.agents/skills/) in the portable Agent Skills format (with a `SKILL.md` per portal). Codex and Antigravity discover these automatically; the `/scrape` workflow in [.claude/skills/job-scraper/](.claude/skills/job-scraper/) orchestrates them.
+
+4. **GPT Application Runtime:**
+   - The application service mapping and local commands are documented in [docs/CODEX_WORKFLOWS.md](docs/CODEX_WORKFLOWS.md). The canonical methodology remains in `.claude/`; slash commands are not native Codex commands.
+   - Keep real profiles and application records in the private database. Never personalize tracked example files in a public contribution or expose API credentials to client code.

@@ -1,0 +1,2 @@
+# Local PDF text extraction; original framework tools are reused by the web app.
+pypdf==6.6.0

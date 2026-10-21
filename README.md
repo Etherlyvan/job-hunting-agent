@@ -1,3 +1,171 @@
+# GPT-Powered Job Hunting Agent
+
+A personal job-search application built alongside the original AI Job Search
+framework: Next.js dashboard, server-side OpenAI agents, PostgreSQL persistence,
+evidence-based matching, reviewed CV/cover-letter drafts and manual application
+tracking. **This is an incremental upgrade, not a replacement of the original
+workflow.** Live AI quality and container execution still need operator validation.
+
+## Acknowledgements and license
+
+Derived from [Mads Lorentzen’s AI Job Search](https://github.com/MadsLorentzen/ai-job-search).
+The original MIT license and copyright are preserved in [LICENSE](LICENSE).
+Candidate methodology, scoring rubric, portable portal CLIs, security tools,
+LaTeX templates and Claude workflows are original project contributions. The
+Next.js application, OpenAI provider, database and web services are new additions.
+No affiliation or endorsement by OpenAI, Anthropic or the original maintainer is implied.
+The preserved original documentation below includes the original author’s voice.
+
+## New application architecture
+
+```text
+Next.js dashboard → validated local APIs → PostgreSQL / Prisma
+                         ↓
+Profile / Discovery / Matching / CV / Letter / Reviewer / Interview / Career
+                         ↓
+Official OpenAI SDK, Responses API, Zod structured outputs (server only)
+                         ↓
+Original posting guard + PDF text/page checks, via local Python bridge
+```
+
+Each agent is a bounded service, with no shell, email or submission tools exposed
+to the model. The drafting/reviewer pipeline allows one revision. CV content is
+selected from confirmed facts and rendered verbatim. Cover letters require
+independent model review and human review; model review cannot prove truthfulness.
+
+| Original framework | New GPT application |
+| --- | --- |
+| Claude-hosted slash commands | Explicit dashboard actions and application services |
+| Profile markdown and tracker CSV | Private database profile and relational application records |
+| Canonical weighted fit rubric | Same four weighted dimensions, plus eligibility/language/location/qualification gates |
+| LaTeX templates and custom toolchains | One/two-page single-column PDF + editable text; original LaTeX retained separately |
+| Portal Bun CLIs | Opt-in Freehire adapter + manual URL/description import; all original CLIs retained |
+| File-based interview and outcome workflows | Persisted mock interview turns, tracker stages/notes, learning progress |
+
+## Run locally (Windows / VS Code)
+
+Prerequisites: Node.js 24 LTS, Python 3.10+, PostgreSQL (tested with 18), and an
+OpenAI API key for AI actions. You can manage profiles, imports and tracking without
+an API key. No paid calls run in the default tests.
+
+```powershell
+npm ci --ignore-scripts
+python -m pip install -r requirements-web.txt
+Copy-Item .env.example .env
+# Edit .env: set DATABASE_URL and OPENAI_API_KEY; never commit it.
+npm run db:generate
+npm run db:migrate
+npm run dev
+```
+
+Open `http://localhost:3000`. Development binds to loopback. For a production local
+server, set `APP_ACCESS_TOKEN` in `.env`, then run `npm run build` and `npm start`.
+Enter the access token in Settings. This shared local token is not multiuser
+authentication: do not expose the application publicly.
+
+### Docker Desktop
+
+```powershell
+Copy-Item .env.example .env
+# Set POSTGRES_PASSWORD and a random APP_ACCESS_TOKEN; optional OPENAI_API_KEY.
+docker compose up --build
+```
+
+Compose starts PostgreSQL with a persistent volume, runs migrations, and starts the
+app after the database is healthy. Ports bind to loopback. Database passwords must
+be URL-safe or percent-encoded in connection URLs. `docker compose down` retains
+the volume; deleting it destroys private records. Docker engine execution was not
+available during implementation; native PostgreSQL migrations/workflows were tested.
+LaTeX is deliberately excluded from the image; the original document toolchain
+can be installed separately as described in the original setup below.
+
+### Configuration
+
+See [.env.example](.env.example). `DATABASE_URL` is required for persistence.
+`OPENAI_API_KEY` enables AI. `OPENAI_MODEL` is the fallback model; workload overrides
+are `OPENAI_MODEL_MATCH`, `OPENAI_MODEL_DRAFT`, and `OPENAI_MODEL_REVIEW`. The example
+uses `gpt-4.1-mini`; select a model available to your account that supports structured
+outputs. Dashboard Settings can override workload models, document language, page
+count and discovery source. `OPENAI_TIMEOUT_MS` bounds each attempt (three maximum).
+`OPENAI_PRICES_JSON` maps model IDs to `{ "input": 0, "output": 0 }` USD per million
+tokens using prices you supply; absent prices show unknown, never an invented total.
+`APP_ORIGIN` protects browser writes. `APP_ACCESS_TOKEN` is required in production.
+`POSTGRES_PASSWORD` is used by Compose. `PYTHON_COMMAND` selects the local interpreter
+(`python` on Windows, `python3` otherwise); the Docker image uses its Python venv.
+
+API implementation follows the official [Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs).
+Responses use `store: false`; this is not a claim of zero provider retention.
+
+## Example workflow
+
+1. In Candidate profile, enter JSON or import a `.txt`/`.md` CV (100 KB maximum).
+   Confirm individual extracted facts; imports start unverified. Save your profile.
+2. In Job explorer, paste a full posting and optional public HTTPS URL. Enable
+   Freehire in Settings for technology discovery in Indonesia/remote/international markets.
+3. Open a job and evaluate fit. Review evidence, missing skills and gates. Scores
+   prioritize your search; they are not hiring probabilities.
+4. Explicitly request CV and letter generation. The reviewer approves or requests
+   one revision; rejected documents are not saved. Page/text checks must pass.
+5. In the studios, edit, re-review and save new versions. Download text/PDF and
+   visually inspect it. The master profile is never overwritten by a tailored CV.
+6. Submit manually. Confirm actual statuses and stages in Application tracker.
+7. Generate interview questions, practice text answers, and track a learning plan.
+
+Tracker CSV import accepts the original header/legacy status spellings and quoted
+notes. Existing records are preserved. Re-applications to the same company/title/
+location currently collapse into one record; archive history remains in the original
+framework, which is not rewritten by web imports.
+
+## Security and portal limits
+
+Private data lives in PostgreSQL and temporary PDF files are removed after
+verification. Back up/encrypt the database and disk yourself. Secrets are never
+returned to the browser or stored through Settings. `.gitignore` excludes environment
+files, generated documents and private state; only `.env.example` is public.
+The old tracked profile templates must remain placeholders in public contributions.
+
+Job text passes the original posting guard, then an additional advisory filter.
+External content has no authority over prompts. AI services have no web/file/shell
+tools. Arbitrary posting URLs are metadata only, eliminating an arbitrary-fetch SSRF
+surface; paste descriptions when retrieval is blocked. Freehire uses a fixed HTTPS
+endpoint and refuses redirects. LinkedIn automation is not exposed by the dashboard
+because its original CLI documents ToS restrictions. No CAPTCHA/authentication/robots
+bypass is implemented. Source failures are explicit; no fake job data is supplied.
+The application has no email or application-submission endpoint.
+
+## Validation and limitations
+
+```powershell
+npm test
+npm run typecheck
+npm run lint
+npm run build
+python -m unittest discover -s tests -t . -q
+python tools/security_guards.py
+# Optional, against a disposable migrated database only:
+$env:ALLOW_TEST_DATABASE_WRITES='true'
+npm run test:db
+```
+
+The app currently imports text/Markdown CVs, not PDF/DOCX CV files. The profile UI
+uses a structured JSON editor. Automatic GitHub/portfolio analysis, independently
+researched company facts, native LaTeX studio editing, Notion/Gmail sync, salary
+benchmarking and custom-template management remain original-workflow-only or future
+web work. Do not confuse preserved capabilities with newly implemented UI features.
+PDFs are mechanically checked for text fidelity, order, page count and bounded
+geometry; human visual review remains required. English/Indonesian Latin text is
+supported; unsupported font glyphs fail explicitly. Authentication, pagination,
+cross-instance rate limiting and background job queues are future deployment work.
+
+See [migration plan](docs/MIGRATION_PLAN.md), [implementation report](docs/IMPLEMENTATION.md),
+and [Codex workflow mapping](docs/CODEX_WORKFLOWS.md). Recommended next work: live
+credential-based evaluation, broader browser end-to-end coverage, portfolio evidence import,
+and optional local LaTeX compilation with rendered layout inspection.
+
+---
+
+## Original framework documentation (preserved)
+
 <p align="center">
   <img src="assets/mascot/pip_flight_loop.gif" alt="Pip, the courier bird" width="200">
 </p>

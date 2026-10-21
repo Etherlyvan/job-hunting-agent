@@ -1,5 +1,39 @@
 # Security Policy
 
+## GPT web runtime
+
+The new Next.js application is for personal local use. Development binds to
+loopback; production APIs require `APP_ACCESS_TOKEN`. The token is shared local
+access control, not multiuser authentication. Browser writes check `APP_ORIGIN`.
+Do not expose the application to the public internet without proper authentication,
+TLS and deployment-specific access controls.
+
+OpenAI credentials are read only on the server. AI actions explicitly initiated in
+the UI send selected candidate/job content to OpenAI with response storage disabled;
+provider data-retention policies still apply. Model calls receive no shell, web,
+file-write, email or submission tools. Review and drafting have a bounded revision
+count. The provider's optional function loop accepts only registered read tools and
+is not enabled for job-content workflows.
+
+The original posting guard is invoked through a fixed-argument Python bridge.
+Only cleaned text, guard verdict and finding counts are retained. The model still
+must treat all external content as data: deterministic filtering cannot detect
+every injection. No arbitrary posting/portfolio URL is fetched. Freehire discovery
+uses a fixed public HTTPS endpoint, bounded timeout and no redirects. Other boards
+use manual posting import; the original standalone portal tools retain their own
+documented restrictions.
+
+Requests use Zod validation, bounded input sizes, sanitized errors, and a single
+personal-workspace mutation rate limit. PostgreSQL contains private records. PDF
+temporary files use restrictive permissions where supported and are removed after
+verification. Generated versions are stored in the database, not public files.
+Standalone tracing and Docker context exclusions omit private profiles, documents,
+environment files and `.data`. The sole allowed environment-file gitignore
+exception is the reviewed public `.env.example` template.
+
+The original security model below remains applicable to Claude workflows. Its
+permission grants do not apply to the new application server.
+
 ## Reporting a vulnerability
 
 Please report security findings privately via **[GitHub private vulnerability reporting](https://github.com/MadsLorentzen/ai-job-search/security/advisories/new)** rather than a public issue. You will get a response within a few days, credit in the fix unless you prefer otherwise, and public disclosure coordinated with the patch.

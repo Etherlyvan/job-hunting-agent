@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String             @id @default(cuid())
+  profiles CandidateProfile[]
+  settings Json               @default("{}")
+}
+
+model CandidateProfile {
+  id          String           @id @default(cuid())
+  userId      String           @unique
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data        Json
+  experiences WorkExperience[]
+  education   Education[]
+  skills      Skill[]
+  projects    Project[]
+  matches     JobMatch[]
+  updatedAt   DateTime         @updatedAt
+}
+
+model WorkExperience {
+  id        String           @id @default(cuid())
+  profileId String
+  profile   CandidateProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  data      Json
+}
+
+model Education {
+  id        String           @id @default(cuid())
+  profileId String
+  profile   CandidateProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  data      Json
+}
+
+model Skill {
+  id        String           @id @default(cuid())
+  profileId String
+  profile   CandidateProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name      String
+
+  @@unique([profileId, name])
+}
+
+model Project {
+  id        String           @id @default(cuid())
+  profileId String
+  profile   CandidateProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  data      Json
+}
+
+model JobPosting {
+  id           String             @id @default(cuid())
+  key          String             @unique
+  title        String
+  company      String
+  location     String
+  description  String
+  url          String?
+  source       String
+  metadata     Json
+  createdAt    DateTime           @default(now())
+  matches      JobMatch[]
+  applications Application[]
+  interviews   InterviewSession[]
+}
+
+model JobMatch {
+  id        String           @id @default(cuid())
+  jobId     String
+  job       JobPosting       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  profileId String
+  profile   CandidateProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  result    Json
+  createdAt DateTime         @default(now())
+}
+
+model Application {
+  id        String              @id @default(cuid())
+  jobId     String              @unique
+  job       JobPosting          @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  status    String              @default("drafted")
+  notes     String              @default("")
+  stage     String              @default("")
+  appliedAt DateTime?
+  updatedAt DateTime            @updatedAt
+  documents GeneratedDocument[]
+}
+
+model GeneratedDocument {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  kind          String
+  source        String
+  review        Json
+  createdAt     DateTime    @default(now())
+}
+
+model InterviewSession {
+  id        String     @id @default(cuid())
+  jobId     String
+  job       JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  data      Json
+  createdAt DateTime   @default(now())
+}
+
+model AIUsageLog {
+  id              String   @id @default(cuid())
+  workload        String
+  model           String
+  inputTokens     Int
+  outputTokens    Int
+  approximateCost Float?
+  createdAt       DateTime @default(now())
+}
+
+model LearningProgress {
+  id        String   @id @default(cuid())
+  skill     String   @unique
+  status    String
+  notes     String
+  updatedAt DateTime @updatedAt
+}
